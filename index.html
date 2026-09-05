@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Allison’s Affirmations by Allen</title>
+
+  <style>
+    :root {
+      --ink: #563c52;
+      --paper: #fffaf6;
+      --envelope: #f4b8c6;
+      --flap: #f8cad3;
+      --accent: #b95c78;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      padding: 28px 16px;
+      background: #fff4f6;
+      color: var(--ink);
+      font-family: Georgia, serif;
+      display: flex;
+      justify-content: center;
+    }
+
+    main {
+      width: min(100%, 540px);
+      text-align: center;
+    }
+
+    h1 {
+      font-size: 1.35rem;
+      margin: 0 0 24px;
+      font-weight: normal;
+    }
+
+    .envelope-wrap {
+      height: 290px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .envelope {
+      position: relative;
+      width: min(92vw, 390px);
+      height: 245px;
+      cursor: pointer;
+      perspective: 900px;
+    }
+
+    .pocket {
+      position: absolute;
+      inset: 0;
+      border-radius: 7px;
+      background: var(--envelope);
+      overflow: hidden;
+      box-shadow: 0 8px 20px #8d536040;
+    }
+
+    .pocket::before,
+    .pocket::after {
+      content: "";
+      position: absolute;
+      width: 0;
+      height: 0;
+      border-style: solid;
+      z-index: 2;
+    }
+
+    .pocket::before {
+      left: 0;
+      bottom: 0;
+      border-width: 123px 195px;
+      border-color: transparent transparent #ef9fb3 #ef9fb3;
+    }
+
+    .pocket::after {
+      right: 0;
+      bottom: 0;
+      border-width: 123px 195px;
+      border-color: transparent #e994aa #e994aa transparent;
+    }
+
+    .flap {
+      position: absolute;
+      top: 0;
+      width: 100%;
+      height: 138px;
+      background: var(--flap);
+      clip-path: polygon(0 0, 100% 0, 50% 100%);
+      transform-origin: top;
+      transition: transform 0.55s ease;
+      z-index: 3;
+      border-radius: 7px 7px 0 0;
+    }
+
+    /* The note is invisible until the envelope opens */
+    .letter {
+      position: absolute;
+      left: 7%;
+      right: 7%;
+      bottom: 12px;
+      min-height: 180px;
+      padding: 28px 18px 16px;
+      background: var(--paper);
+      border-radius: 3px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 15px;
+
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(38px);
+
+      transition:
+        transform 0.55s ease 0.12s,
+        opacity 0.25s ease,
+        visibility 0s linear 0.55s;
+
+      z-index: 1;
+      box-shadow: 0 2px 5px #7e485530;
+    }
+
+    .letter p {
+      margin: 0;
+      font-size: 1.1rem;
+      line-height: 1.5;
+    }
+
+    .envelope.open .flap {
+      transform: rotateX(180deg);
+      z-index: 0;
+    }
+
+    .envelope.open .letter {
+      transform: translateY(-82px);
+      opacity: 1;
+      visibility: visible;
+
+      transition:
+        transform 0.55s ease 0.12s,
+        opacity 0.25s ease 0.25s,
+        visibility 0s;
+
+      z-index: 4;
+    }
+
+    .prompt {
+      margin-top: 12px;
+      color: var(--accent);
+      font-size: 0.9rem;
+    }
+
+    button {
+      appearance: none;
+      border: 0;
+      border-radius: 999px;
+      padding: 10px 18px;
+      background: var(--accent);
+      color: white;
+      font: 600 0.9rem system-ui, sans-serif;
+      cursor: pointer;
+    }
+
+    button:hover {
+      filter: brightness(0.94);
+    }
+
+    .archive {
+      margin-top: 32px;
+      text-align: left;
+      border-top: 1px solid #e8c5cf;
+      padding-top: 20px;
+    }
+
+    .archive h2 {
+      text-align: center;
+      font-size: 1.05rem;
+      font-weight: normal;
+      margin: 0 0 12px;
+    }
+
+    .entry {
+      background: var(--paper);
+      border: 1px solid #f0d7dd;
+      border-radius: 8px;
+      padding: 12px 14px;
+      margin: 8px 0;
+      line-height: 1.4;
+    }
+
+    .entry time {
+      display: block;
+      color: var(--accent);
+      font: 600 0.76rem system-ui, sans-serif;
+      margin-bottom: 4px;
+    }
+
+    .empty {
+      text-align: center;
+      color: #9b7781;
+      font-style: italic;
+      padding: 10px;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .flap,
+      .letter {
+        transition: none;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <main>
+    <h1>Allison’s Affirmations by Allen</h1>
+
+    <div class="envelope-wrap">
+      <div
+        class="envelope"
+        id="envelope"
+        role="button"
+        tabindex="0"
+        aria-label="Open today’s affirmation"
+      >
+        <div class="pocket"></div>
+
+        <div class="letter">
+          <p id="todayMessage"></p>
+
+          <button id="archiveButton" hidden>
+            Archive today’s affirmation
+          </button>
+        </div>
+
+        <div class="flap"></div>
+      </div>
+    </div>
+
+    <p class="prompt" id="prompt">
+      Click the envelope to open it
+    </p>
+
+    <section class="archive">
+      <h2>Archived affirmations</h2>
+      <div id="archiveList"></div>
+    </section>
+  </main>
+
+  <script>
+    /*
+      EDIT THIS LIST:
+
+      The first affirmation begins at 6:00 AM on January 1.
+      The second begins at 6:00 AM on January 2.
+      Add as many affirmations as you want.
+
+      If the list ends, it repeats from the top.
+    */
+    const dailyNotes = [
+      "This is your first affirmation from me, you already being here is a big step!"
+    ];
+
+    const envelope = document.getElementById("envelope");
+    const messageEl = document.getElementById("todayMessage");
+    const archiveButton = document.getElementById("archiveButton");
+    const archiveList = document.getElementById("archiveList");
+    const prompt = document.getElementById("prompt");
+
+    const storageKey = "allisons-affirmations-by-allen-6am-v1";
+
+    /*
+      Makes the new affirmation day begin at 6:00 AM.
+
+      Example:
+      - September 5 at 2:00 AM still shows September 4's note.
+      - September 5 at 6:00 AM shows September 5's next note.
+    */
+    function affirmationDay(date = new Date()) {
+      const shifted = new Date(date);
+
+      if (shifted.getHours() < 6) {
+        shifted.setDate(shifted.getDate() - 1);
+      }
+
+      return shifted;
+    }
+
+    function createDateId(date) {
+      return (
+        date.getFullYear() +
+        "-" +
+        String(date.getMonth() + 1).padStart(2, "0") +
+        "-" +
+        String(date.getDate()).padStart(2, "0")
+      );
+    }
+
+    function getDayOfYear(date) {
+      const startOfYear = new Date(date.getFullYear(), 0, 0);
+
+      return Math.floor(
+        (date - startOfYear) / 86400000
+      );
+    }
+
+    function formatDate(date) {
+      return date.toLocaleDateString("en-US", {
+        weekday: "long",
+        month: "long",
+        day: "numeric",
+        year: "numeric"
+      });
+    }
+
+    let activeDate = affirmationDay();
+    let activeId = createDateId(activeDate);
+
+    let archived = JSON.parse(
+      localStorage.getItem(storageKey) || "[]"
+    );
+
+    let savedToday = archived.find(
+      note => note.id === activeId
+    );
+
+    let todayNote = savedToday
+      ? savedToday.message
+      : dailyNotes[
+          (getDayOfYear(activeDate) - 1) %
+          dailyNotes.length
+        ];
+
+    let opened = false;
+
+    messageEl.textContent = todayNote;
+
+    function renderArchive() {
+      archiveList.innerHTML = "";
+
+      if (!archived.length) {
+        archiveList.innerHTML =
+          '<div class="empty">Your saved daily affirmations will appear here.</div>';
+        return;
+      }
+
+      archived
+        .slice()
+        .reverse()
+        .forEach(note => {
+          const item = document.createElement("article");
+
+          item.className = "entry";
+
+          item.innerHTML = `
+            <time>${note.date}</time>
+            <span></span>
+          `;
+
+          item.querySelector("span").textContent =
+            note.message;
+
+          archiveList.appendChild(item);
+        });
+    }
+
+    function archiveToday() {
+      const alreadyArchived = archived.some(
+        note => note.id === activeId
+      );
+
+      if (!alreadyArchived) {
+        archived.push({
+          id: activeId,
+          date: formatDate(activeDate),
+          message: todayNote
+        });
+
+        localStorage.setItem(
+          storageKey,
+          JSON.stringify(archived)
+        );
+      }
+
+      archiveButton.hidden = true;
+      prompt.textContent = "Saved to your archive.";
+
+      renderArchive();
+    }
+
+    function openEnvelope() {
+      if (opened) return;
+
+      opened = true;
+      envelope.classList.add("open");
+
+      const alreadySaved = archived.some(
+        note => note.id === activeId
+      );
+
+      archiveButton.hidden = alreadySaved;
+
+      prompt.textContent = alreadySaved
+        ? "Today’s affirmation is already in your archive."
+        : "Save it when you are ready.";
+    }
+
+    function checkForNewAffirmation() {
+      const newActiveDate = affirmationDay();
+      const newId = createDateId(newActiveDate);
+
+      if (newId === activeId) return;
+
+      activeDate = newActiveDate;
+      activeId = newId;
+
+      archived = JSON.parse(
+        localStorage.getItem(storageKey) || "[]"
+      );
+
+      savedToday = archived.find(
+        note => note.id === activeId
+      );
+
+      todayNote = savedToday
+        ? savedToday.message
+        : dailyNotes[
+            (getDayOfYear(activeDate) - 1) %
+            dailyNotes.length
+          ];
+
+      messageEl.textContent = todayNote;
+
+      opened = false;
+      envelope.classList.remove("open");
+
+      archiveButton.hidden = true;
+
+      prompt.textContent =
+        "Click the envelope to open it";
+
+      renderArchive();
+    }
+
+    envelope.addEventListener("click", openEnvelope);
+
+    envelope.addEventListener("keydown", event => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        openEnvelope();
+      }
+    });
+
+    archiveButton.addEventListener("click", event => {
+      event.stopPropagation();
+      archiveToday();
+    });
+
+    renderArchive();
+
+    /* Checks in the background every 30 seconds for the 6 AM rollover */
+    setInterval(checkForNewAffirmation, 30000);
+  </script>
+</body>
+</html>

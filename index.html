@@ -101,7 +101,7 @@
       border-radius: 7px 7px 0 0;
     }
 
-    /* The note is invisible until the envelope opens */
+    /* The note is completely invisible until the envelope opens */
     .letter {
       position: absolute;
       left: 7%;
@@ -165,7 +165,7 @@
       border-radius: 999px;
       padding: 10px 18px;
       background: var(--accent);
-      color: white;
+      color: #fff;
       font: 600 0.9rem system-ui, sans-serif;
       cursor: pointer;
     }
@@ -258,20 +258,41 @@
 
   <script>
     /*
-      EDIT THIS LIST:
+      ADD NEW NOTES ONLY AT THE BOTTOM OF THIS LIST.
 
-      The first affirmation begins at 6:00 AM on January 1.
-      The second begins at 6:00 AM on January 2.
-      Add as many affirmations as you want.
+      Note 1 begins September 5, 2026, at 6:00 AM.
+      Note 2 begins September 6, 2026, at 6:00 AM.
+      Note 3 begins September 7, 2026, at 6:00 AM.
 
-      If the list ends, it repeats from the top.
+      The list does NOT repeat.
+      If you run out of notes, the website says a new
+      affirmation is being written until you add another.
     */
     const dailyNotes = [
-      "Welcome to the first little note of affirmation by Allen, everyday at 6AM a new note will appear, be careful if you dont check in, you'll miss out! Everything is hand written with love, that means what you see is what Allen Ramollari wrote!",
-      "You do not have to be perfect, easy or fully healed to be worth loving. There is already something inside of you of value just from the way you live and work day by day.",
-      "You are allowed to take up space in a person's life without feeling like you have to prove you deserve it. The right kind of care is not something you have to earn, the right people will value you for who you already are.",
-      "You can be a work in progress, we all are, and yet you can still be worth choosing, chasing, protecting, laughing with, and cared about."
+      "Welcome to the first little note of affirmation by Allen. Every day at 6 AM, a new note will appear. Everything here is written with love, which means what you see is something Allen Ramollari wanted you to have.",
+
+      "You do not have to be perfect, easy, or fully healed to be worth loving. There is already something valuable in you in the way you keep showing up, even on days when you are hard on yourself.",
+
+      "You are allowed to take up space in someone's life without proving you deserve it. Real care is not a prize for being flawless; it can meet you exactly as you are.",
+
+      "Being a work in progress does not make you less worth choosing, protecting, laughing with, or caring about. It just makes you human, like the rest of us."
     ];
+
+    /*
+      Change this only if you deliberately want to restart
+      the entire affirmation schedule on another date.
+    */
+    const START_DATE = {
+      year: 2026,
+      month: 9,
+      day: 4
+    };
+
+    /*
+      Do not change this unless you intentionally want
+      the website to start with an empty archive.
+    */
+    const storageKey = "allisons-affirmations-by-allen-6am-v1";
 
     const envelope = document.getElementById("envelope");
     const messageEl = document.getElementById("todayMessage");
@@ -279,23 +300,22 @@
     const archiveList = document.getElementById("archiveList");
     const prompt = document.getElementById("prompt");
 
-    const storageKey = "allisons-affirmations-by-allen-6am-v1";
-
     /*
-      Makes the new affirmation day begin at 6:00 AM.
-
-      Example:
-      - September 5 at 2:00 AM still shows September 4's note.
-      - September 5 at 6:00 AM shows September 5's next note.
+      Before 6 AM, the previous day remains active.
+      At 6 AM, the next scheduled note becomes active.
     */
     function affirmationDay(date = new Date()) {
-      const shifted = new Date(date);
+      const adjusted = new Date(date);
 
-      if (shifted.getHours() < 6) {
-        shifted.setDate(shifted.getDate() - 1);
+      if (adjusted.getHours() < 6) {
+        adjusted.setDate(adjusted.getDate() - 1);
       }
 
-      return shifted;
+      return new Date(
+        adjusted.getFullYear(),
+        adjusted.getMonth(),
+        adjusted.getDate()
+      );
     }
 
     function createDateId(date) {
@@ -308,14 +328,6 @@
       );
     }
 
-    function getDayOfYear(date) {
-      const startOfYear = new Date(date.getFullYear(), 0, 0);
-
-      return Math.floor(
-        (date - startOfYear) / 86400000
-      );
-    }
-
     function formatDate(date) {
       return date.toLocaleDateString("en-US", {
         weekday: "long",
@@ -325,6 +337,28 @@
       });
     }
 
+    function noteIndex(date) {
+      const start = new Date(
+        START_DATE.year,
+        START_DATE.month - 1,
+        START_DATE.day
+      );
+
+      return Math.round(
+        (date - start) / 86400000
+      );
+    }
+
+    function noteForDate(date) {
+      const index = noteIndex(date);
+
+      if (index < 0) {
+        return null;
+      }
+
+      return dailyNotes[index] || null;
+    }
+
     let activeDate = affirmationDay();
     let activeId = createDateId(activeDate);
 
@@ -332,20 +366,24 @@
       localStorage.getItem(storageKey) || "[]"
     );
 
-    let savedToday = archived.find(
-      note => note.id === activeId
-    );
-
-    let todayNote = savedToday
-      ? savedToday.message
-      : dailyNotes[
-          (getDayOfYear(activeDate) - 1) %
-          dailyNotes.length
-        ];
-
     let opened = false;
 
-    messageEl.textContent = todayNote;
+    function currentNote() {
+      const saved = archived.find(
+        note => note.id === activeId
+      );
+
+      return saved
+        ? saved.message
+        : noteForDate(activeDate);
+    }
+
+    function displayCurrent() {
+      const note = currentNote();
+
+      messageEl.textContent = note ||
+        "A new affirmation is being written with love. Check back soon.";
+    }
 
     function renderArchive() {
       archiveList.innerHTML = "";
@@ -377,15 +415,21 @@
     }
 
     function archiveToday() {
+      const note = currentNote();
+
+      if (!note) {
+        return;
+      }
+
       const alreadyArchived = archived.some(
-        note => note.id === activeId
+        item => item.id === activeId
       );
 
       if (!alreadyArchived) {
         archived.push({
           id: activeId,
           date: formatDate(activeDate),
-          message: todayNote
+          message: note
         });
 
         localStorage.setItem(
@@ -401,49 +445,50 @@
     }
 
     function openEnvelope() {
-      if (opened) return;
+      if (opened) {
+        return;
+      }
 
       opened = true;
       envelope.classList.add("open");
 
+      const note = currentNote();
+
       const alreadySaved = archived.some(
-        note => note.id === activeId
+        item => item.id === activeId
       );
 
-      archiveButton.hidden = alreadySaved;
+      archiveButton.hidden = !note || alreadySaved;
 
-      prompt.textContent = alreadySaved
-        ? "Today’s affirmation is already in your archive."
-        : "Save it when you are ready.";
+      if (!note) {
+        prompt.textContent =
+          "A new note will appear when it is ready.";
+      } else if (alreadySaved) {
+        prompt.textContent =
+          "Today’s affirmation is already in your archive.";
+      } else {
+        prompt.textContent =
+          "Save it when you are ready.";
+      }
     }
 
     function checkForNewAffirmation() {
-      const newActiveDate = affirmationDay();
-      const newId = createDateId(newActiveDate);
+      const newDate = affirmationDay();
+      const newId = createDateId(newDate);
 
-      if (newId === activeId) return;
+      if (newId === activeId) {
+        return;
+      }
 
-      activeDate = newActiveDate;
+      activeDate = newDate;
       activeId = newId;
 
       archived = JSON.parse(
         localStorage.getItem(storageKey) || "[]"
       );
 
-      savedToday = archived.find(
-        note => note.id === activeId
-      );
-
-      todayNote = savedToday
-        ? savedToday.message
-        : dailyNotes[
-            (getDayOfYear(activeDate) - 1) %
-            dailyNotes.length
-          ];
-
-      messageEl.textContent = todayNote;
-
       opened = false;
+
       envelope.classList.remove("open");
 
       archiveButton.hidden = true;
@@ -451,6 +496,7 @@
       prompt.textContent =
         "Click the envelope to open it";
 
+      displayCurrent();
       renderArchive();
     }
 
@@ -468,9 +514,13 @@
       archiveToday();
     });
 
+    displayCurrent();
     renderArchive();
 
-    /* Checks in the background every 30 seconds for the 6 AM rollover */
+    /*
+      If the page remains open overnight, it checks for
+      the new daily note every 30 seconds.
+    */
     setInterval(checkForNewAffirmation, 30000);
   </script>
 </body>
